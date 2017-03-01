@@ -824,12 +824,15 @@ func (b *Boxer) BoxMessage(ctx context.Context, msg chat1.MessagePlaintext, sign
 
 	// CORE-4540: MerkleRoot will be in signed header.
 	//            It is useless to put it in the unsigned header in the meantime.
-	// merkleRoot, err := b.latestMerkleRoot()
-	// if err != nil {
-	// 	return nil, NewBoxingError(err.Error(), false)
-	// }
-	// msg.ClientHeader.MerkleRoot = merkleRoot
-	msg.ClientHeader.MerkleRoot = nil
+	merkleRoot, err := b.latestMerkleRoot()
+	if err != nil {
+		return nil, NewBoxingError(err.Error(), false)
+	}
+	msg.ClientHeader.MerkleRoot = merkleRoot
+
+	if msg.ClientHeader.MerkleRoot == nil {
+		panic("@@@ box: MERKLE NIL")
+	}
 
 	b.log().Warning("@@@ box MR: %+v", msg.ClientHeader.MerkleRoot)
 
