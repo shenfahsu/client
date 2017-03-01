@@ -1017,6 +1017,7 @@ export type HeaderPlaintextV1 = {
   sender: gregor1.UID,
   senderDevice: gregor1.DeviceID,
   bodyHash: Hash,
+  merkleRoot?: ?MerkleRoot,
   outboxInfo?: ?OutboxInfo,
   outboxID?: ?OutboxID,
   headerSignature?: ?SignatureInfo,
@@ -1145,6 +1146,7 @@ export type MessageClientHeaderVerified = {
   prev?: ?Array<MessagePreviousPointer>,
   sender: gregor1.UID,
   senderDevice: gregor1.DeviceID,
+  merkleRoot?: ?MerkleRoot,
   outboxID?: ?OutboxID,
   outboxInfo?: ?OutboxInfo,
 }

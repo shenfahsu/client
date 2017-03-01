@@ -12,6 +12,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"golang.org/x/crypto/nacl/secretbox"
@@ -63,7 +64,7 @@ type Boxer struct {
 func NewBoxer(g *libkb.GlobalContext, tlf func() keybase1.TlfInterface) *Boxer {
 	return &Boxer{
 		DebugLabeler:   utils.NewDebugLabeler(g, "Boxer", false),
-		boxWithVersion: chat1.MessageBoxedVersion_V1,
+		boxWithVersion: chat1.MessageBoxedVersion_V2,
 		tlf:            tlf,
 		hashV1:         hashSha256V1,
 		Contextified:   libkb.NewContextified(g),
@@ -199,6 +200,7 @@ func (b *Boxer) UnboxMessage(ctx context.Context, boxed chat1.MessageBoxed, conv
 }
 
 func (b *Boxer) unbox(ctx context.Context, boxed chat1.MessageBoxed, encryptionKey *keybase1.CryptKey) (*chat1.MessageUnboxedValid, UnboxingError) {
+	b.log().Warning("@@@ unbox message: %+v", boxed)
 	switch boxed.Version {
 	case chat1.MessageBoxedVersion_VNONE, chat1.MessageBoxedVersion_V1:
 		return b.unboxV1(ctx, boxed, encryptionKey)
@@ -339,6 +341,7 @@ func (b *Boxer) unboxV1(ctx context.Context, boxed chat1.MessageBoxed, encryptio
 		headerSignature = header.V1().HeaderSignature
 		hp := header.V1()
 		bodyHash = hp.BodyHash
+		b.log().Warning("@@@ unbox v1 MR: %+v", hp.MerkleRoot)
 		clientHeader = chat1.MessageClientHeaderVerified{
 			Conv:         hp.Conv,
 			TlfName:      hp.TlfName,
@@ -348,6 +351,7 @@ func (b *Boxer) unboxV1(ctx context.Context, boxed chat1.MessageBoxed, encryptio
 			Sender:       hp.Sender,
 			SenderDevice: hp.SenderDevice,
 			// CORE-4540: MerkleRoot will be in signed header, but probably not in any V1 messages.
+			MerkleRoot: hp.MerkleRoot,
 			OutboxID:   hp.OutboxID,
 			OutboxInfo: hp.OutboxInfo,
 		}
@@ -451,6 +455,7 @@ func (b *Boxer) unboxV2(ctx context.Context, boxed chat1.MessageBoxed, encryptio
 	if ierr != nil {
 		return nil, ierr
 	}
+	b.log().Warning("@@@ unbox v2 MR: %+v", clientHeader.MerkleRoot)
 
 	// Whether the body is missing (deleted)
 	isBodyDeleted := (len(boxed.BodyCiphertext.E) == 0)
@@ -549,6 +554,7 @@ func (b *Boxer) unversionHeader(ctx context.Context, headerVersioned chat1.Heade
 			Sender:       hp.Sender,
 			SenderDevice: hp.SenderDevice,
 			// CORE-4540: MerkleRoot will be in signed header.
+			MerkleRoot: hp.MerkleRoot,
 			OutboxID:   hp.OutboxID,
 			OutboxInfo: hp.OutboxInfo,
 		}, hp.BodyHash, nil
@@ -645,14 +651,14 @@ func (b *Boxer) compareHeadersV2(ctx context.Context, hServer chat1.MessageClien
 		return NewPermanentUnboxingError(NewHeaderMismatchError("SenderDevice"))
 	}
 
-	// MerkleRoot (disabled)
+	// MerkleRoot
 	// CORE-4540: Enable this check.
 	//            This check is disabled because MerkleRoot is not yet signed.
 	//            Simultaneously with enabling boxing MBV2, it will be added to the signed header.
 	//            And will match from then on.
-	// if hServer.MerkleRoot.Eq(hSigned.MerkleRoot) {
-	// 	return NewPermanentUnboxingError(NewHeaderMismatchError("MerkleRoot"))
-	// }
+	if !hServer.MerkleRoot.Eq(hSigned.MerkleRoot) {
+		return NewPermanentUnboxingError(NewHeaderMismatchError("MerkleRoot"))
+	}
 
 	// OutboxID
 	if !hServer.OutboxID.Eq(hSigned.OutboxID) {
@@ -823,6 +829,9 @@ func (b *Boxer) BoxMessage(ctx context.Context, msg chat1.MessagePlaintext, sign
 	// 	return nil, NewBoxingError(err.Error(), false)
 	// }
 	// msg.ClientHeader.MerkleRoot = merkleRoot
+	msg.ClientHeader.MerkleRoot = nil
+
+	b.log().Warning("@@@ box MR: %+v", msg.ClientHeader.MerkleRoot)
 
 	if len(msg.ClientHeader.TlfName) == 0 {
 		msg := fmt.Sprintf("blank TLF name received: original: %s canonical: %s", tlfName,
@@ -875,7 +884,7 @@ func (b *Boxer) boxV1(messagePlaintext chat1.MessagePlaintext, key *keybase1.Cry
 		Prev:         messagePlaintext.ClientHeader.Prev,
 		Sender:       messagePlaintext.ClientHeader.Sender,
 		SenderDevice: messagePlaintext.ClientHeader.SenderDevice,
-		// CORE-4540: Add MerkleRoot to signed header.
+		// CORE-4540: Add MerkleRoot to signed header. But really don't.
 		BodyHash:   bodyHash[:],
 		OutboxInfo: messagePlaintext.ClientHeader.OutboxInfo,
 		OutboxID:   messagePlaintext.ClientHeader.OutboxID,
@@ -931,8 +940,9 @@ func (b *Boxer) boxV2(messagePlaintext chat1.MessagePlaintext, encryptionKey *ke
 		Prev:         messagePlaintext.ClientHeader.Prev,
 		Sender:       messagePlaintext.ClientHeader.Sender,
 		SenderDevice: messagePlaintext.ClientHeader.SenderDevice,
+		BodyHash:     bodyHash,
 		// CORE-4540: Add MerkleRoot to signed header.
-		BodyHash:   bodyHash,
+		MerkleRoot: messagePlaintext.ClientHeader.MerkleRoot,
 		OutboxInfo: messagePlaintext.ClientHeader.OutboxInfo,
 		OutboxID:   messagePlaintext.ClientHeader.OutboxID,
 		// In MessageBoxed.V2 HeaderSignature is nil.
@@ -958,6 +968,8 @@ func (b *Boxer) boxV2(messagePlaintext chat1.MessagePlaintext, encryptionKey *ke
 		VerifyKey:        verifyKey,
 		KeyGeneration:    encryptionKey.KeyGeneration,
 	}
+
+	b.log().Warning("@@@ box result: %+v", *boxed)
 
 	return boxed, nil
 }
@@ -987,6 +999,8 @@ func (b *Boxer) seal(data interface{}, key *keybase1.CryptKey) (*chat1.Encrypted
 // open decrypts chat1.EncryptedData.
 func (b *Boxer) open(data chat1.EncryptedData, key *keybase1.CryptKey) ([]byte, error) {
 	if len(data.N) != libkb.NaclDHNonceSize {
+		b.log().Warning("@@@ open: bad nonce: %+v", data.N)
+		debug.PrintStack()
 		return nil, libkb.DecryptBadNonceError{}
 	}
 	var nonce [libkb.NaclDHNonceSize]byte
@@ -1086,6 +1100,8 @@ func (b *Boxer) signEncryptOpen(data chat1.SignEncryptedData, encryptionKey *key
 
 	var nonce [signencrypt.NonceSize]byte
 	if copy(nonce[:], data.N) != signencrypt.NonceSize {
+		b.log().Warning("@@@ signEncryptOpen: bad nonce: %+v", data.N)
+		debug.PrintStack()
 		return nil, libkb.DecryptBadNonceError{}
 	}
 

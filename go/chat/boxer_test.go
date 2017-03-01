@@ -846,7 +846,7 @@ func TestV1Message1(t *testing.T) {
 	require.Equal(t, canned.SenderUID(t), unboxed.ClientHeader.Sender)
 	require.Equal(t, canned.SenderDeviceID(t), unboxed.ClientHeader.SenderDevice)
 	// CORE-4540: Uncomment this assertion when MerkleRoot is added to MessageClientHeaderVerified
-	// require.Nil(t, unboxed.ClientHeader.MerkleRoot)
+	require.Nil(t, unboxed.ClientHeader.MerkleRoot)
 	require.Nil(t, unboxed.ClientHeader.OutboxID)
 	require.Nil(t, unboxed.ClientHeader.OutboxInfo)
 
@@ -903,7 +903,7 @@ func TestV1Message2(t *testing.T) {
 	require.Equal(t, canned.SenderUID(t), unboxed.ClientHeader.Sender)
 	require.Equal(t, canned.SenderDeviceID(t), unboxed.ClientHeader.SenderDevice)
 	// CORE-4540: Uncomment this assertion when MerkleRoot is added to MessageClientHeaderVerified
-	// require.Nil(t, unboxed.ClientHeader.MerkleRoot)
+	require.Nil(t, unboxed.ClientHeader.MerkleRoot)
 	require.Nil(t, unboxed.ClientHeader.OutboxID)
 	require.Nil(t, unboxed.ClientHeader.OutboxInfo)
 
@@ -960,7 +960,7 @@ func TestV1Message3(t *testing.T) {
 	require.Equal(t, canned.SenderUID(t), unboxed.ClientHeader.Sender)
 	require.Equal(t, canned.SenderDeviceID(t), unboxed.ClientHeader.SenderDevice)
 	// CORE-4540: Uncomment this assertion when MerkleRoot is added to MessageClientHeaderVerified
-	// require.Nil(t, unboxed.ClientHeader.MerkleRoot)
+	require.Nil(t, unboxed.ClientHeader.MerkleRoot)
 	require.Nil(t, unboxed.ClientHeader.OutboxID)
 	require.Nil(t, unboxed.ClientHeader.OutboxInfo)
 
@@ -1018,7 +1018,7 @@ func TestV1Message4(t *testing.T) {
 	require.Equal(t, canned.SenderUID(t), unboxed.ClientHeader.Sender)
 	require.Equal(t, canned.SenderDeviceID(t), unboxed.ClientHeader.SenderDevice)
 	// CORE-4540: Uncomment this assertion when MerkleRoot is added to MessageClientHeaderVerified
-	// require.Nil(t, unboxed.ClientHeader.MerkleRoot)
+	require.Nil(t, unboxed.ClientHeader.MerkleRoot)
 	expectedOutboxID := chat1.OutboxID{0x8e, 0xcc, 0x94, 0xb7, 0xff, 0x50, 0x5c, 0x4}
 	require.Equal(t, &expectedOutboxID, unboxed.ClientHeader.OutboxID)
 	expectedOutboxInfo := &chat1.OutboxInfo{Prev: 0x3, ComposeTime: 1487708373568}
@@ -1080,7 +1080,7 @@ func TestV1Message5(t *testing.T) {
 	require.Equal(t, canned.SenderUID(t), unboxed.ClientHeader.Sender)
 	require.Equal(t, canned.SenderDeviceID(t), unboxed.ClientHeader.SenderDevice)
 	// CORE-4540: Uncomment this assertion when MerkleRoot is added to MessageClientHeaderVerified
-	// require.Nil(t, unboxed.ClientHeader.MerkleRoot)
+	require.Nil(t, unboxed.ClientHeader.MerkleRoot)
 	expectedOutboxID := chat1.OutboxID{0xdc, 0x74, 0x6, 0x5d, 0xf9, 0x5f, 0x1c, 0x48}
 	require.Equal(t, &expectedOutboxID, unboxed.ClientHeader.OutboxID)
 	expectedOutboxInfo := &chat1.OutboxInfo{Prev: 0x3, ComposeTime: 1487708384552}

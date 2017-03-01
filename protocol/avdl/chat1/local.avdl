@@ -178,6 +178,8 @@ protocol local {
     // MessageBoxed.V2: Hash of encrypted body (.v || .n || .e)
     //                  Where V is a big-endian int32
     Hash bodyHash;
+    // Latest merkle root when sent. Can be nil.
+    union { null, MerkleRoot } merkleRoot;
     union { null, OutboxInfo } outboxInfo;
     union { null, OutboxID } outboxID;
     // MessageBoxed.V1: Signature over the serialized HeaderPlaintextV1 (with headerSignature set to null).
