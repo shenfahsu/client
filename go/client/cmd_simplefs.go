@@ -315,7 +315,14 @@ func doSimpleFSGlob(g *libkb.GlobalContext, ctx context.Context, cli SimpleFSInt
 			// remote glob
 			globbed, err = doSimpleFSRemoteGlob(g, ctx, cli, path)
 		} else {
-			globbed, err = doSimpleFSPlatformGlob(g, ctx, cli, path)
+			// local glob
+			matches, err := filepath.Glob(path.Local())
+			if err != nil {
+				return nil, err
+			}
+			for _, match := range matches {
+				globbed = append(globbed, keybase1.NewPathWithLocal(match))
+			}
 		}
 		if err != nil {
 			return nil, err
