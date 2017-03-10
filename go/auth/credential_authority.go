@@ -120,6 +120,10 @@ type UserKeyAPIer interface {
 	// PollForChanges returns the UIDs that have recently changed on the server
 	// side. It will be called in a poll loop.
 	PollForChanges(context.Context) ([]keybase1.UID, error)
+
+	// AcceptPushNotifications is called by a UserKeyAPIer if it wants to get
+	// pushes about new UID updates.
+	AcceptPushNotifications(context.Context, chan<- UID) error
 }
 
 // engine specifies the internal mechanics of how this CredentialAuthority
